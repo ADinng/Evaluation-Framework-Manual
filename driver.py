@@ -1,41 +1,34 @@
 import argparse
 import subprocess
 import sys
-from multiprocessing.pool import ThreadPool
 from pathlib import Path
 
-CWD = Path(__file__).parent.resolve()
-GENERATOR = CWD / "generator.py"
-PLOTTER = CWD / "plotter.py"
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Driver script to process .cfg files and generate plots.")
-    parser.add_argument("path", type=str, help="Path to the directory containing .cfg files (default: current directory)", default=".")
+def get_arguments():
+    parser = argparse.ArgumentParser(description="Process .cfg files and generate plots.")
+    parser.add_argument("path", type=str, help="Path to the directory containing .cfg files", default=".")
     return parser.parse_args()
 
 
-def process_config(config: Path) -> None:
-    name = config.stem
-    csv = config.with_name(f"{name}-data.csv")
-    cdf = config.with_name(f"{name}-CDF.pdf")
-    box = config.with_name(f"{name}-Box.pdf")
-    
-    # Call generator.py with the .cfg file as an argument
-    subprocess.run([sys.executable, GENERATOR, "-c", str(config), "-o", str(csv)], check=True)
-    
-    # Call plotter.py with the generated .csv file as an argument
-    subprocess.run([sys.executable, PLOTTER, "-d", str(csv), "-c", str(cdf), "-b", str(box)], check=True)
+def process_cfg(config_file: Path):
+    base_name = config_file.stem
+    csv_file = config_file.with_name(f"{base_name}-data.csv")
+    cdf_file = config_file.with_name(f"{base_name}-CDF.pdf")
+    box_file = config_file.with_name(f"{base_name}-Box.pdf")
+
+    subprocess.run([sys.executable, "generator.py", "-c", str(config_file), "-o", str(csv_file)], check=True)
+    subprocess.run([sys.executable, "plotter.py", "-d", str(csv_file), "-c", str(cdf_file), "-b", str(box_file)], check=True)
 
 
-def main() -> None:
-    args = parse_args()
-    path = Path(args.path).resolve()
-    configs = list(path.glob("*.cfg"))
+def main():
+    args = get_arguments()
+    config_dir = Path(args.path).resolve()
+    config_files = list(config_dir.glob("*.cfg"))
     
-    # Use ThreadPool to process multiple .cfg files in parallel
-    with ThreadPool() as pool:
-        pool.map(process_config, configs)
+    for config_file in config_files:
+        print(f"Processing {config_file.name}...")
+        process_cfg(config_file)
+        print(f"Finished processing {config_file.name}.")
 
 
 if __name__ == "__main__":
